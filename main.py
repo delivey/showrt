@@ -26,60 +26,70 @@ make_search.send_keys(Keys.RETURN)
 search_result = driver.find_element_by_class_name('primary_photo')
 search_result.click()
 
-# gets the current url, creates the new url, opening season 1
-current_url = driver.current_url
-# new_url = current_url.replace("?ref_=fn_al_tt_1", "episodes?season=1")
-new_url = current_url.replace("?ref_=fn_al_tt_1", "episodes?ref_=ttep_ql_1")
+"""current_url = driver.current_url
+new_url = current_url.replace("?ref_=fn_al_tt_1", "episodes?ref_=tt_ov_epl")
 driver.get(new_url)
+season_element = driver.find_element_by_css_selector("#episode_top")
+# season_element = driver.find_element_by_xpath("/html/body/div[2]/div/div[2]/div[1]/div[1]/div[1]/div[2]/div[2]/h3")
+season_number = int(season_element.get_attribute()) # /html/body/div[2]/div/div[2]/div[1]/div[1]/div[1]/div[2]/div[2]/h3
+print(f"previous season: {season_number}")"""
 
-# finds out how many episodes are in season 1
-element = driver.find_element_by_css_selector('meta[itemprop="numberofEpisodes"]')
-ep_number = element.get_attribute('content')
-ep_num_int = int(ep_number)
-ep_list = list(range(1, ep_num_int + 1))
+def season_execute(season_number):
+    # gets the current url, creates the new url, opening whatever season season_number is
+    current_url = driver.current_url
+    new_url = current_url.replace("?ref_=fn_al_tt_1", f"episodes?season={season_number}")
+    # new_url = current_url.replace("?ref_=fn_al_tt_1", "episodes?ref_=ttep_ql_1")
+    driver.get(new_url)
 
-# creates a default excel worksheet
-excel_file = xlsxwriter.Workbook(f'{path}\{search_term}.xlsx')
-worksheet = excel_file.add_worksheet()
-worksheet.write('A1', 'Episode')
-worksheet.write('B1', 'Rating')
-print("Excel file created")
+    # finds out how many episodes are in season 1
+    element = driver.find_element_by_css_selector('meta[itemprop="numberofEpisodes"]')
+    ep_number = int(element.get_attribute('content'))
+    ep_list = list(range(1, ep_number + 1))
 
-# creates a list of episodes in excel
-for idx, month in enumerate(ep_list):
-    worksheet.write(idx + 1, 0, ep_list[idx])
+    # creates a default excel worksheet
+    excel_file = xlsxwriter.Workbook(f'{path}\{search_term}.xlsx')
+    worksheet = excel_file.add_worksheet()
+    worksheet.write('A1', 'Episode')
+    worksheet.write('B1', 'Rating')
+    print("Excel file created")
 
-# gets the rating for each episode and assigns it in excel
-for num in ep_list:
-    rating = driver.find_elements_by_css_selector('span[class="ipl-rating-star__rating"]')
-    rating_list = []
-    for i in rating:
-        rating_txt = i.get_attribute('innerHTML')
-        if '.' in rating_txt:
-            rating_list.append(rating_txt)
+    # creates a list of episodes in excel
+    for idx, month in enumerate(ep_list):
+        worksheet.write(idx + 1, 0, ep_list[idx])
 
-float_list = list(np.float_(rating_list))
-        
-for idx, month in enumerate(ep_list):
-    worksheet.write(idx + 1, 1, float_list[idx])
-print("Excel file filled")
+    # gets the rating for each episode and assigns it in excel
+    for num in ep_list:
+        rating = driver.find_elements_by_css_selector('span[class="ipl-rating-star__rating"]')
+        rating_list = []
+        for i in rating:
+            rating_txt = i.get_attribute('innerHTML')
+            if '.' in rating_txt:
+                rating_list.append(rating_txt)
 
-excel_file.close()
+    float_list = list(np.float_(rating_list))
+            
+    for idx, month in enumerate(ep_list):
+        worksheet.write(idx + 1, 1, float_list[idx])
+    print("Excel file filled")
 
-lowest_num = min(float_list)
-lowest_rounded = int(round(lowest_num))
-real_low = lowest_rounded
-if lowest_rounded > lowest_num:
-    real_low += lowest_rounded-1
+    excel_file.close()
 
-# creates the line chart
-df = pd.read_excel(f'{path}\{search_term}.xlsx')
-default_plot = df.plot(x='Episode', y='Rating', kind='line', color='red', ylim=(real_low, 10))
-default_plot.xaxis.set_major_locator(MaxNLocator(integer=True))
-default_plot.set_title(f'Each {search_term} Episode Rating')
-default_plot.set_ylabel('Rating')
+    lowest_num = min(float_list)
+    max_num = max(float_list)
+    lowest_rounded = int(round(lowest_num))
+    real_low = lowest_rounded
+    if lowest_rounded > lowest_num:
+        real_low += lowest_rounded-1
 
-# saves the line chart
-plt.savefig(f'{path}\{search_term}_chart.png', dpi=300)
-print("Chart saved")
+    # creates the line chart
+    df = pd.read_excel(f'{path}\{search_term}.xlsx')
+    default_plot = df.plot(x='Episode', y='Rating', kind='line', color='red', ylim=(real_low, max_num))
+    default_plot.xaxis.set_major_locator(MaxNLocator(integer=True))
+    default_plot.set_title(f'Each {search_term} Episode Rating')
+    default_plot.set_ylabel('Rating')
 
+    # saves the line chart
+    plt.savefig(f'{path}\{search_term}_{season_number}_chart.png', dpi=300)
+    print("Chart saved")
+
+season_execute(1)
